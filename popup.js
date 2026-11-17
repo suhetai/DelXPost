@@ -5,6 +5,7 @@ const DEFAULTS = {
   pauseMin: 10,
   maxTotal: 0,
   username: 'g_oi21',
+  searchTerms: '痞客邦',
   autoReload: true,
   maxEmptyReloads: 2,
   startDate: '2010-01-01',
@@ -73,8 +74,8 @@ $('cursor').addEventListener('change', async () => {
 $('search').onclick = async () => {
   await save({ useDateRange: false });
   const s = readForm();
-  const kw = s.keyword.replace(/^https?:\/\//, '');
-  const q = (s.username ? `from:${s.username.replace(/^@/, '')} ` : '') + `"${kw}"`;
+  const terms = s.searchTerms || s.keyword.replace(/^https?:\/\//, '');
+  const q = (s.username ? `from:${s.username.replace(/^@/, '')} ` : '') + terms;
   chrome.tabs.create({ url: `https://x.com/search?q=${encodeURIComponent(q)}&src=typed_query&f=live` });
 };
 

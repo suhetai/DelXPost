@@ -8,6 +8,7 @@
   const DEFAULTS = {
     keyword: 'http://ccs0919.pixnet.net',
     username: 'g_oi21',
+    searchTerms: '痞客邦', // 搜索用的词（不加引号），与删除匹配的关键字分开
     intervalSec: 2,       // 每删一条间隔（秒）
     batchSize: 200,       // 每批删除数量
     pauseMin: 10,         // 每批之后暂停（分钟）
@@ -85,8 +86,8 @@
   }
 
   function buildSearchUrl(s, win) {
-    const kw = (s.keyword || '').trim().replace(/^https?:\/\//, '');
-    let q = (s.username ? `from:${s.username.replace(/^@/, '')} ` : '') + `"${kw}"`;
+    const terms = (s.searchTerms || '').trim() || (s.keyword || '').trim().replace(/^https?:\/\//, '');
+    let q = (s.username ? `from:${s.username.replace(/^@/, '')} ` : '') + terms;
     if (win) q += ` since:${win.since} until:${win.until}`;
     return `https://x.com/search?q=${encodeURIComponent(q)}&src=typed_query&f=live`;
   }
