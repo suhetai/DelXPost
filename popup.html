@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    body { width: 320px; font: 13px/1.5 system-ui, sans-serif; margin: 12px; }
+    h3 { margin: 0 0 8px; }
+    label { display: block; margin-top: 8px; color: #444; }
+    input { width: 100%; box-sizing: border-box; padding: 4px 6px; }
+    .row { display: flex; gap: 8px; }
+    .row > div { flex: 1; }
+    button { margin-top: 10px; padding: 6px 10px; border: 0; border-radius: 6px; cursor: pointer; color: #fff; }
+    #start { background: #1d9bf0; }
+    #stop { background: #f4212e; }
+    #search { background: #555; width: 100%; }
+    #reset { background: #999; }
+    #status { margin-top: 10px; padding: 8px; background: #f3f3f3; border-radius: 6px; white-space: pre-wrap; }
+    .hint { color: #888; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h3>🧹 X Tweet Cleaner</h3>
+
+  <label>要匹配的字符串（包含即删除）</label>
+  <input id="keyword" />
+
+  <div class="row">
+    <div><label>删除间隔（秒）</label><input id="intervalSec" type="number" min="0.5" step="0.5" /></div>
+    <div><label>每批数量</label><input id="batchSize" type="number" min="1" /></div>
+  </div>
+  <div class="row">
+    <div><label>批间暂停（分钟）</label><input id="pauseMin" type="number" min="0" step="0.5" /></div>
+    <div><label>总上限（0=不限）</label><input id="maxTotal" type="number" min="0" /></div>
+  </div>
+
+  <label>你的用户名（用于打开搜索页，不带 @）</label>
+  <input id="username" placeholder="g_oi21" />
+  <button id="search">① 打开搜索结果页（推荐）</button>
+
+  <div>
+    <button id="start">② 开始删除</button>
+    <button id="stop">停止</button>
+    <button id="reset">计数清零</button>
+  </div>
+
+  <div id="status">-</div>
+  <p class="hint">在 x.com 的个人主页或搜索结果页上点击“开始”。删除不可恢复，请先用“总上限”小量测试。</p>
+
+  <script src="popup.js"></script>
+</body>
+</html>
