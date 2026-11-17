@@ -4,31 +4,44 @@ const DEFAULTS = {
   batchSize: 200,
   pauseMin: 10,
   maxTotal: 0,
-  username: 'g_oi21'
+  username: 'g_oi21',
+  autoReload: true,
+  maxEmptyReloads: 2,
+  startDate: '2010-01-01',
+  endDate: '',
+  windowDays: 30
 };
-const FIELDS = ['keyword', 'intervalSec', 'batchSize', 'pauseMin', 'maxTotal', 'username'];
+const FIELDS = Object.keys(DEFAULTS);
 const $ = (id) => document.getElementById(id);
 
 async function load() {
-  const { settings, stats } = await chrome.storage.local.get(['settings', 'stats']);
+  const { settings, stats, dateCursor } = await chrome.storage.local.get(['settings', 'stats', 'dateCursor']);
   const s = { ...DEFAULTS, ...(settings || {}) };
-  FIELDS.forEach((f) => ($(f).value = s[f]));
+  FIELDS.forEach((f) => {
+    if ($(f).type === 'checkbox') $(f).checked = !!s[f];
+    else $(f).value = s[f];
+  });
+  $('cursor').value = Number(dateCursor || 0) + 1;
   showStats(stats);
 }
 
 function readForm() {
   const s = {};
   FIELDS.forEach((f) => {
-    const v = $(f).value.trim();
-    s[f] = $(f).type === 'number' ? Number(v) || 0 : v;
+    const el = $(f);
+    if (el.type === 'checkbox') s[f] = el.checked;
+    else if (el.type === 'number') s[f] = Number(el.value) || 0;
+    else s[f] = el.value.trim();
   });
   if (s.intervalSec < 0.5) s.intervalSec = 0.5;
   if (s.batchSize < 1) s.batchSize = 1;
+  if (s.windowDays < 1) s.windowDays = 30;
   return s;
 }
 
-async function save() {
-  await chrome.storage.local.set({ settings: readForm() });
+async function save(extra = {}) {
+  const { settings } = await chrome.storage.local.get('settings');
+  await chrome.storage.local.set({ settings: { ...(settings || {}), ...readForm(), ...extra } });
 }
 
 function showStats(st) {
@@ -41,44 +54,53 @@ function showStats(st) {
   $('status').textContent = txt;
 }
 
-async function activeXTab() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  return tab;
-}
-
 async function send(type) {
-  const tab = await activeXTab();
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   try {
     await chrome.tabs.sendMessage(tab.id, { type });
     return true;
   } catch (e) {
-    $('status').textContent = '无法连接页面脚本：请确认当前标签页是 x.com，并刷新页面后重试。';
+    $('status').textContent = '无法连接页面脚本：请先打开 x.com 页面（并刷新一次）后重试。';
     return false;
   }
 }
 
-FIELDS.forEach((f) => $(f).addEventListener('change', save));
+FIELDS.forEach((f) => $(f).addEventListener('change', () => save()));
+$('cursor').addEventListener('change', async () => {
+  await chrome.storage.local.set({ dateCursor: Math.max(0, (Number($('cursor').value) || 1) - 1) });
+});
 
 $('search').onclick = async () => {
-  await save();
+  await save({ useDateRange: false });
   const s = readForm();
-  // 搜索时去掉 http://，X 搜索对网址片段匹配更好
   const kw = s.keyword.replace(/^https?:\/\//, '');
-  const q = (s.username ? `from:${s.username} ` : '') + `"${kw}"`;
+  const q = (s.username ? `from:${s.username.replace(/^@/, '')} ` : '') + `"${kw}"`;
   chrome.tabs.create({ url: `https://x.com/search?q=${encodeURIComponent(q)}&src=typed_query&f=live` });
 };
 
 $('start').onclick = async () => {
-  await save();
+  await save({ useDateRange: false });
   await send('start');
 };
+
+$('startDate_btn').onclick = async () => {
+  await save({ useDateRange: true });
+  await chrome.storage.local.set({ dateCursor: Math.max(0, (Number($('cursor').value) || 1) - 1) });
+  await send('startDateMode');
+};
+
 $('stop').onclick = () => send('stop');
 $('reset').onclick = async () => {
-  await chrome.storage.local.set({ stats: { total: 0, batch: 0, skipped: 0, status: '计数已清零', resumeAt: 0 } });
+  await chrome.storage.local.set({
+    stats: { total: 0, batch: 0, skipped: 0, status: '计数已清零', resumeAt: 0 },
+    dateCursor: 0
+  });
+  $('cursor').value = 1;
 };
 
 chrome.storage.onChanged.addListener((changes) => {
   if (changes.stats) showStats(changes.stats.newValue);
+  if (changes.dateCursor) $('cursor').value = Number(changes.dateCursor.newValue || 0) + 1;
 });
 setInterval(async () => showStats((await chrome.storage.local.get('stats')).stats), 1000);
 

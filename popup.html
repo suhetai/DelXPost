@@ -3,19 +3,23 @@
 <head>
   <meta charset="utf-8" />
   <style>
-    body { width: 320px; font: 13px/1.5 system-ui, sans-serif; margin: 12px; }
+    body { width: 340px; font: 13px/1.5 system-ui, sans-serif; margin: 12px; }
     h3 { margin: 0 0 8px; }
+    h4 { margin: 12px 0 0; padding-top: 8px; border-top: 1px solid #ddd; }
     label { display: block; margin-top: 8px; color: #444; }
+    label.check { display: flex; align-items: center; gap: 6px; }
+    label.check input { width: auto; }
     input { width: 100%; box-sizing: border-box; padding: 4px 6px; }
     .row { display: flex; gap: 8px; }
     .row > div { flex: 1; }
     button { margin-top: 10px; padding: 6px 10px; border: 0; border-radius: 6px; cursor: pointer; color: #fff; }
     #start { background: #1d9bf0; }
+    #startDate_btn { background: #00a36c; width: 100%; }
     #stop { background: #f4212e; }
     #search { background: #555; width: 100%; }
     #reset { background: #999; }
     #status { margin-top: 10px; padding: 8px; background: #f3f3f3; border-radius: 6px; white-space: pre-wrap; }
-    .hint { color: #888; font-size: 12px; }
+    .hint { color: #888; font-size: 12px; margin: 4px 0 0; }
   </style>
 </head>
 <body>
@@ -33,18 +37,36 @@
     <div><label>总上限（0=不限）</label><input id="maxTotal" type="number" min="0" /></div>
   </div>
 
-  <label>你的用户名（用于打开搜索页，不带 @）</label>
+  <label>你的用户名（不带 @）</label>
   <input id="username" placeholder="g_oi21" />
-  <button id="search">① 打开搜索结果页（推荐）</button>
 
+  <label class="check"><input id="autoReload" type="checkbox" /> 本页删完后自动刷新页面继续</label>
+  <div class="row">
+    <div><label>连续刷新几次仍无结果算删完</label><input id="maxEmptyReloads" type="number" min="0" /></div>
+  </div>
+
+  <h4>按时间段自动搜索（推荐用于大量推文）</h4>
+  <div class="row">
+    <div><label>开始日期</label><input id="startDate" type="date" /></div>
+    <div><label>结束日期（空=今天）</label><input id="endDate" type="date" /></div>
+  </div>
+  <div class="row">
+    <div><label>每段天数</label><input id="windowDays" type="number" min="1" /></div>
+    <div><label>当前进度（段序号，从 1 开始）</label><input id="cursor" type="number" min="1" /></div>
+  </div>
+  <button id="startDate_btn">按时间段自动删除（从“当前进度”那段开始）</button>
+  <p class="hint">每段删完会自动跳到下一段。可在任何 x.com 页面点击。</p>
+
+  <h4>或：只删当前页面</h4>
+  <button id="search">① 打开搜索结果页（不分时间段）</button>
   <div>
-    <button id="start">② 开始删除</button>
+    <button id="start">② 在当前页开始删除</button>
     <button id="stop">停止</button>
     <button id="reset">计数清零</button>
   </div>
 
   <div id="status">-</div>
-  <p class="hint">在 x.com 的个人主页或搜索结果页上点击“开始”。删除不可恢复，请先用“总上限”小量测试。</p>
+  <p class="hint">删除不可恢复，请先用“总上限”小量测试。</p>
 
   <script src="popup.js"></script>
 </body>
