@@ -26,11 +26,25 @@
     #followerTable td, #followerTable th { padding: 3px 4px; border-bottom: 1px solid #eee; text-align: left; }
     #followerTable td.num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
     #followerTable td.err { color: #f4212e; font-size: 12px; }
+    .tabs { display: flex; gap: 4px; margin-bottom: 4px; border-bottom: 1px solid #ddd; }
+    .tab { flex: 1; margin: 0; padding: 8px 0; background: none; color: #536471; border-radius: 0;
+           font-size: 14px; font-weight: 600; border-bottom: 3px solid transparent; }
+    .tab:hover { background: #f3f3f3; }
+    .tab.active { color: #0f1419; border-bottom-color: #1d9bf0; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .panel > h4:first-child { border-top: 0; padding-top: 0; }
   </style>
 </head>
 <body>
   <h3>🧹 X Tweet Cleaner</h3>
 
+  <div class="tabs">
+    <button class="tab" data-tab="delete">🗑️ 自动删帖</button>
+    <button class="tab" data-tab="followers">👥 查询粉丝</button>
+  </div>
+
+  <div class="panel" id="panel-delete">
   <label>要匹配的字符串（包含即删除）</label>
   <input id="keyword" />
 
@@ -77,7 +91,9 @@
 
   <div id="status">-</div>
   <p class="hint">删除不可恢复，请先用“总上限”小量测试。</p>
+  </div>
 
+  <div class="panel" id="panel-followers">
   <h4>批量查询粉丝数（精确值）</h4>
   <label>账号 ID，每行一个（可带 @ 或主页链接）</label>
   <textarea id="followerIds" placeholder="elonmusk&#10;@nasa&#10;https://x.com/github"></textarea>
@@ -86,6 +102,7 @@
   <table id="followerTable"></table>
   <p class="hint">带 ≈ 的是从页面读取的缩写值（未能读到精确值）。</p>
   <button id="copyDebug" style="background:#999">复制调试数据（查询有问题时发给开发者）</button>
+  </div>
 
   <script src="popup.js"></script>
 </body>

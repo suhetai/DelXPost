@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "X Tweet Cleaner - 按关键字批量删推",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "description": "在 X/Twitter 页面上按关键字批量删除自己的推文，支持删除间隔、批次暂停；批量查询账号精确粉丝数。",
   "permissions": ["storage"],
   "background": {

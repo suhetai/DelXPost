@@ -175,4 +175,18 @@ chrome.storage.local.get(['followerIds', 'followerQuery']).then(({ followerIds, 
   renderFollowers(followerQuery);
 });
 
+// ---------- 顶部标签切换（记住上次选择） ----------
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
+  document.querySelectorAll('.panel').forEach((p) => p.classList.toggle('active', p.id === 'panel-' + name));
+}
+document.querySelectorAll('.tab').forEach((t) => {
+  t.onclick = () => {
+    showTab(t.dataset.tab);
+    chrome.storage.local.set({ popupTab: t.dataset.tab });
+  };
+});
+showTab('delete');
+chrome.storage.local.get('popupTab').then(({ popupTab }) => popupTab && showTab(popupTab));
+
 load();
