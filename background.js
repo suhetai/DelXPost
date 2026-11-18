@@ -18,7 +18,7 @@ function screenNameFromUrl(url) {
   }
 }
 
-// 在返回数据里递归查找指定账号的粉丝数
+// 在返回数据里递归查找指定账号的粉丝数（严格：要求账号名匹配）
 function findUser(json, want) {
   let found = null;
   (function walk(o) {
@@ -36,20 +36,86 @@ function findUser(json, want) {
   return found;
 }
 
-function handleUserData(msg, sender) {
-  if (!pending || sender.tab?.id !== pending.tabId) return;
-  const want = pending.id.toLowerCase();
-  const user = findUser(msg.data, want);
-  if (user) {
-    pending.resolve({ status: 'ok', ...user });
+// 宽松查找：这个请求本来就是查该账号的，只要找到任何粉丝数字段就用
+const FOLLOWER_KEYS = ['followers_count', 'followersCount', 'normal_followers_count'];
+function findFollowersAnywhere(json) {
+  let found = null;
+  let name = '';
+  (function walk(o) {
+    if (!o || typeof o !== 'object' || found) return;
+    if (!name && typeof o.name === 'string' && (o.screen_name || o.screenName)) name = o.name;
+    for (const key of FOLLOWER_KEYS) {
+      const v = o[key];
+      if (typeof v === 'number' || (typeof v === 'string' && /^\d+$/.test(v))) {
+        found = Number(v);
+        if (!name && typeof o.name === 'string') name = o.name;
+        return;
+      }
+    }
+    for (const k in o) walk(o[k]);
+  })(json);
+  return found === null ? null : { followers: found, name };
+}
+
+// 把 "1,052" / "1.2K" / "3.4万" 转成数字；带缩写的标记为近似值
+function parseCount(text) {
+  const t = (text || '').replace(/[,，\s]/g, '');
+  const m = t.match(/([\d.]+)(K|M|B|千|万|萬|亿|億)?/i);
+  if (!m) return null;
+  const mult = { k: 1e3, m: 1e6, b: 1e9, '千': 1e3, '万': 1e4, '萬': 1e4, '亿': 1e8, '億': 1e8 };
+  const unit = (m[2] || '').toLowerCase();
+  return { followers: Math.round(parseFloat(m[1]) * (mult[unit] || 1)), approx: !!unit };
+}
+
+// 记录最近几次截到的原始数据，方便排查（弹窗里可复制）
+async function saveDebug(id, url, data) {
+  try {
+    const { followerDebug = [] } = await chrome.storage.local.get('followerDebug');
+    followerDebug.push({ id, url: String(url).slice(0, 300), data: JSON.stringify(data).slice(0, 6000) });
+    await chrome.storage.local.set({ followerDebug: followerDebug.slice(-6) });
+  } catch (_) { /* ignore */ }
+}
+
+// 兜底：从页面上读取显示的粉丝数
+async function tryDom() {
+  const p = pending;
+  if (!p || p.tabId == null) return;
+  let r;
+  try {
+    r = await chrome.tabs.sendMessage(p.tabId, { type: 'readFollowersDom', id: p.id });
+  } catch (_) {
     return;
   }
-  // 是这个账号的请求，但没有用户数据 => 不存在 / 被封 / 受限
-  if (screenNameFromUrl(msg.url) === want) {
-    const r = msg.data?.data?.user?.result;
-    const reason = r?.__typename === 'UserUnavailable' ? (r.reason || '账号不可用') : '账号不存在或已被封';
-    pending.resolve({ status: 'error', error: reason });
+  if (pending !== p || !r) return;
+  if (r.text) {
+    const c = parseCount(r.text);
+    if (c) p.resolve({ status: 'ok', followers: c.followers, approx: c.approx, name: r.name || p.name || '' });
+  } else if (r.notFound) {
+    p.resolve({ status: 'error', error: '账号不存在或已被封' });
   }
+}
+
+function handleUserData(msg, sender) {
+  if (!pending || sender.tab?.id !== pending.tabId) return;
+  const p = pending;
+  const want = p.id.toLowerCase();
+  const urlMatches = screenNameFromUrl(msg.url) === want;
+  if (urlMatches) saveDebug(p.id, msg.url, msg.data);
+
+  const user = findUser(msg.data, want) || (urlMatches ? findFollowersAnywhere(msg.data) : null);
+  if (user) {
+    p.resolve({ status: 'ok', ...user });
+    return;
+  }
+  if (!urlMatches) return;
+
+  const r = msg.data?.data?.user?.result;
+  if (r?.__typename === 'UserUnavailable') {
+    p.resolve({ status: 'error', error: r.reason || '账号不可用' });
+    return;
+  }
+  // 数据格式无法识别：稍后从页面读取显示的数字
+  setTimeout(tryDom, 3000);
 }
 
 async function saveQuery(q) {
@@ -60,6 +126,8 @@ async function saveQuery(q) {
 function waitForUser(id, tabId) {
   return new Promise((resolve) => {
     pending = { tabId, id, resolve };
+    setTimeout(tryDom, 10000);
+    setTimeout(tryDom, PAGE_TIMEOUT_MS - 2000);
     setTimeout(() => resolve({ status: 'error', error: '超时，未获取到数据（请确认已登录 x.com）' }), PAGE_TIMEOUT_MS);
   });
 }

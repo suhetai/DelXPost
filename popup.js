@@ -134,7 +134,7 @@ function renderFollowers(q) {
     const c = tr.insertCell();
     if (r.status === 'ok') {
       c.className = 'num';
-      c.textContent = r.followers.toLocaleString('en-US');
+      c.textContent = (r.approx ? '≈' : '') + r.followers.toLocaleString('en-US');
     } else if (r.status === 'error') {
       c.className = 'err';
       c.textContent = r.error;
@@ -157,6 +157,13 @@ $('queryFollowers').onclick = async () => {
   }
   const res = await chrome.runtime.sendMessage({ type: 'queryFollowers', ids });
   if (res && !res.ok) $('followerTable').textContent = res.error;
+};
+
+$('copyDebug').onclick = async () => {
+  const { followerDebug = [], followerQuery } = await chrome.storage.local.get(['followerDebug', 'followerQuery']);
+  const text = JSON.stringify({ version: chrome.runtime.getManifest().version, followerQuery, followerDebug }, null, 1);
+  await navigator.clipboard.writeText(text);
+  $('copyDebug').textContent = followerDebug.length ? '已复制，粘贴发给开发者即可' : '已复制（没有截到任何数据）';
 };
 
 chrome.storage.onChanged.addListener((changes) => {
