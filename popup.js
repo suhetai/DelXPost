@@ -105,4 +105,67 @@ chrome.storage.onChanged.addListener((changes) => {
 });
 setInterval(async () => showStats((await chrome.storage.local.get('stats')).stats), 1000);
 
+// ---------- 批量查询粉丝数 ----------
+function parseIds(text) {
+  const ids = [];
+  for (let t of text.split(/[\s,，、]+/)) {
+    t = t.trim().replace(/^https?:\/\/(www\.|mobile\.)?(x|twitter)\.com\//i, '').split(/[/?#]/)[0].replace(/^@/, '');
+    if (/^[A-Za-z0-9_]{1,15}$/.test(t) && !ids.some((x) => x.toLowerCase() === t.toLowerCase())) ids.push(t);
+  }
+  return ids;
+}
+
+function renderFollowers(q) {
+  const table = $('followerTable');
+  table.textContent = '';
+  if (!q) return;
+  $('queryFollowers').disabled = !!q.running;
+  $('queryFollowers').textContent = q.running ? '查询中…' : '查询粉丝数';
+  const head = table.insertRow();
+  ['账号', '名称', '粉丝数'].forEach((h) => {
+    const th = document.createElement('th');
+    th.textContent = h;
+    head.appendChild(th);
+  });
+  for (const r of q.results) {
+    const tr = table.insertRow();
+    tr.insertCell().textContent = '@' + r.id;
+    tr.insertCell().textContent = r.name || '';
+    const c = tr.insertCell();
+    if (r.status === 'ok') {
+      c.className = 'num';
+      c.textContent = r.followers.toLocaleString('en-US');
+    } else if (r.status === 'error') {
+      c.className = 'err';
+      c.textContent = r.error;
+    } else {
+      c.textContent = r.status === 'loading' ? '查询中…' : '等待';
+    }
+  }
+}
+
+$('followerIds').addEventListener('change', () => chrome.storage.local.set({ followerIds: $('followerIds').value }));
+
+$('queryFollowers').onclick = async () => {
+  const text = $('followerIds').value;
+  await chrome.storage.local.set({ followerIds: text });
+  const ids = parseIds(text);
+  if (!ids.length) {
+    renderFollowers({ results: [] });
+    $('followerTable').textContent = '请填写至少一个有效的账号 ID';
+    return;
+  }
+  const res = await chrome.runtime.sendMessage({ type: 'queryFollowers', ids });
+  if (res && !res.ok) $('followerTable').textContent = res.error;
+};
+
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes.followerQuery) renderFollowers(changes.followerQuery.newValue);
+});
+
+chrome.storage.local.get(['followerIds', 'followerQuery']).then(({ followerIds, followerQuery }) => {
+  if (followerIds) $('followerIds').value = followerIds;
+  renderFollowers(followerQuery);
+});
+
 load();

@@ -20,6 +20,12 @@
     #reset { background: #999; }
     #status { margin-top: 10px; padding: 8px; background: #f3f3f3; border-radius: 6px; white-space: pre-wrap; }
     .hint { color: #888; font-size: 12px; margin: 4px 0 0; }
+    textarea { width: 100%; box-sizing: border-box; height: 90px; padding: 4px 6px; font: inherit; }
+    #queryFollowers { background: #7856ff; width: 100%; }
+    #followerTable { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    #followerTable td, #followerTable th { padding: 3px 4px; border-bottom: 1px solid #eee; text-align: left; }
+    #followerTable td.num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+    #followerTable td.err { color: #f4212e; font-size: 12px; }
   </style>
 </head>
 <body>
@@ -71,6 +77,13 @@
 
   <div id="status">-</div>
   <p class="hint">删除不可恢复，请先用“总上限”小量测试。</p>
+
+  <h4>批量查询粉丝数（精确值）</h4>
+  <label>账号 ID，每行一个（可带 @ 或主页链接）</label>
+  <textarea id="followerIds" placeholder="elonmusk&#10;@nasa&#10;https://x.com/github"></textarea>
+  <button id="queryFollowers">查询粉丝数</button>
+  <p class="hint">会在后台临时打开一个标签页逐个读取，查完自动关闭。需要已登录 x.com。</p>
+  <table id="followerTable"></table>
 
   <script src="popup.js"></script>
 </body>
